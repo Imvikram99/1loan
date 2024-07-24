@@ -73,7 +73,7 @@ public class DataInitializer {
             // Initialize LateFeeDetails
             LateFeeDetails lateFeeDetails = new LateFeeDetails();
             lateFeeDetails.setFeeDate(LocalDate.now());
-            lateFeeDetails.setLateFeeAmount(100.0);
+            lateFeeDetails.setLateFeeAmount(10000.0);
             lateFeeDetails.setLoanPayment(loanPayment2);
             lateFeeDetails.setPaid(false);
 
@@ -81,7 +81,7 @@ public class DataInitializer {
             loanPayment1.setLateFeeDetails(null); // or set if applicable
             loanPayment2.setLateFeeDetails(lateFeeDetails);
             payments.add(loanPayment2);
-
+            savedLoanDetails.setTotalLateFees(10000);
             savedLoanDetails.setPayments(payments);
             loanDetailsRepository.save(savedLoanDetails);
 

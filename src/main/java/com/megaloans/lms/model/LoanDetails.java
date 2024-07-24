@@ -28,8 +28,6 @@ public class LoanDetails {
     private double outstandingPrincipal;
     private double totalInterestAccrued;
     private double totalLateFees;
-    private LocalDate lastPaymentDate;
-    private double lastPaymentAmount;
     private LoanStatus loanStatus;
 
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -50,8 +48,6 @@ public class LoanDetails {
                 ", outstandingPrincipal=" + outstandingPrincipal +
                 ", totalInterestAccrued=" + totalInterestAccrued +
                 ", totalLateFees=" + totalLateFees +
-                ", lastPaymentDate=" + lastPaymentDate +
-                ", lastPaymentAmount=" + lastPaymentAmount +
                 ", loanStatus=" + loanStatus +
                 '}';
     }

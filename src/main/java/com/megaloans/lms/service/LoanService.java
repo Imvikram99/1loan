@@ -8,6 +8,7 @@ import com.megaloans.lms.repository.LoanDetailsRepository;
 import com.megaloans.lms.repository.LoanPaymentRepository;
 import com.megaloans.lms.repository.TransactionHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,11 @@ public class LoanService {
             throw new IllegalArgumentException("Loan not found");
         }
 
+
         LoanDetails loanDetails = loanDetailsOptional.get();
+        if(loanDetails.getLoanStatus()!=LoanStatus.ACTIVE){
+            throw new RuntimeException("loan is not active") ;
+        }
         double paymentAmount = request.getPaymentAmount();
         double remainingAmount = paymentAmount;
         double lateFeePaid = 0.0;
@@ -77,8 +82,12 @@ public class LoanService {
       List<LateFeeDetails> lateFeeDetailsList = lateFeeDetailsRepository.findLateFeesByLoanId(loanDetails.getLoanId());
         for (LateFeeDetails lateFeeDetails : lateFeeDetailsList) {
             if (remainingAmount <= 0) break;
+            if(lateFeeDetails.getPaid()==true){
+                continue;
+            }
 
             double feeAmount = lateFeeDetails.getLateFeeAmount();
+            feeAmount -= lateFeeDetails.getPaidAmount();
             if (feeAmount > remainingAmount) {
                 lateFeePaid += remainingAmount;
                 feeAmount -= remainingAmount;
@@ -87,10 +96,11 @@ public class LoanService {
                 lateFeePaid += feeAmount;
                 remainingAmount -= feeAmount;
                 feeAmount = 0;
+                lateFeeDetails.setPaid(true);
             }
 
             // Update the LateFeeDetails entry as paid
-            lateFeeDetails.setPaid(true);  // Assuming there's a field to mark as paid
+             // Assuming there's a field to mark as paid
             lateFeeDetails.setPaidAmount(lateFeeDetails.getPaidAmount() + lateFeePaid);
             lateFeeDetailsRepository.save(lateFeeDetails);
         }
@@ -122,6 +132,9 @@ public class LoanService {
         // 4. Apply remaining amount towards principal
         if (remainingAmount > 0) {
             principalPaid = remainingAmount;
+            if(principalPaid >=loanDetails.getOutstandingPrincipal()){
+                loanDetails.setLoanStatus(LoanStatus.CLOSED);
+            }
             remainingAmount = 0;
         }
 
