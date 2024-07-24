@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class LoanService {
@@ -59,7 +60,7 @@ public class LoanService {
         return savedLoanDetails;
     }
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional(isolation = Isolation.SERIALIZABLE, timeout = 5)
     public LoanPayment makeRepayment(RepaymentRequest request) {
         Optional<LoanDetails> loanDetailsOptional = loanDetailsRepository.findById(request.getLoanId());
         if (!loanDetailsOptional.isPresent()) {
@@ -163,9 +164,101 @@ public class LoanService {
         transactionHistory.setAmount(paymentAmount);
 
         transactionHistoryRepository.save(transactionHistory);
-
         return loanPayment;
     }
+
+    @Transactional(isolation = Isolation.SERIALIZABLE, timeout = 5)
+    public LoanPayment makeRepayment2(RepaymentRequest request) {
+        LoanDetails loanDetails = loanDetailsRepository.findById(request.getLoanId())
+                .orElseThrow(() -> new IllegalArgumentException("Loan not found"));
+
+        if (loanDetails.getLoanStatus() != LoanStatus.ACTIVE) {
+            throw new RuntimeException("Loan is not active");
+        }
+
+        double paymentAmount = request.getPaymentAmount();
+        double remainingAmount = paymentAmount;
+        double lateFeePaid = 0.0;
+        double lateFeeInterestPaid = 0.0;
+        double accruedInterestPaid = 0.0;
+        double principalPaid = 0.0;
+
+        // 1. Knock off late fees first
+        List<LateFeeDetails> lateFeeDetailsList = lateFeeDetailsRepository.findLateFeesByLoanId(loanDetails.getLoanId());
+        for (LateFeeDetails lateFeeDetails : lateFeeDetailsList) {
+            if (remainingAmount <= 0) break;
+            if (lateFeeDetails.getPaid()) continue;
+
+            double feeAmount = lateFeeDetails.getLateFeeAmount() - lateFeeDetails.getPaidAmount();
+            double payment = Math.min(feeAmount, remainingAmount);
+
+            lateFeePaid += payment;
+            remainingAmount -= payment;
+
+            lateFeeDetails.setPaidAmount(lateFeeDetails.getPaidAmount() + payment);
+            if (feeAmount <= payment) {
+                lateFeeDetails.setPaid(true);
+            }
+
+            lateFeeDetailsRepository.save(lateFeeDetails);
+        }
+
+        // 2. Pay interest on late fees (if applicable)
+        double lateFeeInterest = lateFeePaid * 0.001;
+        if (remainingAmount > 0) {
+            double payment = Math.min(lateFeeInterest, remainingAmount);
+            lateFeeInterestPaid = payment;
+            remainingAmount -= payment;
+        }
+
+        // 3. Pay accrued interest on the loan
+        double accruedInterest = calculateInterest(loanDetails, request.getPaymentDate());
+        if (remainingAmount > 0) {
+            double payment = Math.min(accruedInterest, remainingAmount);
+            accruedInterestPaid = payment;
+            remainingAmount -= payment;
+        }
+
+        // 4. Apply remaining amount towards principal
+        if (remainingAmount > 0) {
+            principalPaid = remainingAmount;
+            loanDetails.setOutstandingPrincipal(loanDetails.getOutstandingPrincipal() - principalPaid);
+            remainingAmount = 0;
+            if (loanDetails.getOutstandingPrincipal() <= 0) {
+                loanDetails.setLoanStatus(LoanStatus.CLOSED);
+            }
+        }
+
+        loanDetailsRepository.save(loanDetails);
+
+        // Record the payment
+        LoanPayment loanPayment = new LoanPayment();
+        loanPayment.setLoan(loanDetails);
+        loanPayment.setPaymentDate(request.getPaymentDate());
+        loanPayment.setPaymentAmount(paymentAmount);
+        loanPayment.setLateFeeAmountPaid(lateFeePaid);
+        loanPayment.setInterestPaid(accruedInterestPaid);
+        loanPayment.setPrincipalPaid(principalPaid);
+        loanPayment.setMissedEmiNumber(0);
+
+        LoanPayment savedLoanPayment = loanPaymentRepository.save(loanPayment);
+        logTransaction(savedLoanPayment, loanDetails);
+        return savedLoanPayment;
+    }
+
+    private void logTransaction(LoanPayment loanPayment, LoanDetails loanDetails) {
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setLoanId(loanDetails.getLoanId());
+        transactionHistory.setTransactionDate(loanPayment.getPaymentDate());
+        transactionHistory.setTransactionType(TransactionType.PAYMENT);
+        transactionHistory.setTransactionSubType(TransactionSubType.EMI_PAYMENT);
+        transactionHistory.setAmount(loanPayment.getPaymentAmount());
+
+        transactionHistoryRepository.save(transactionHistory);
+
+        // Additional logging, notifications, etc.
+    }
+
 
 
     @Transactional(readOnly = true)
