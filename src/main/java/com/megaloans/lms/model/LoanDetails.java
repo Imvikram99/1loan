@@ -17,9 +17,8 @@ public class LoanDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int loanId;
-
-    private int userId; // Foreign key referencing Users table
-    private int mutualFundId; // Foreign key referencing MutualFunds table
+    private int userId;
+    private int mutualFundId;
     private double loanAmount;
     private double interestRate;
     private int loanTerm;
@@ -30,9 +29,14 @@ public class LoanDetails {
     private double totalLateFees;
     private LoanStatus loanStatus;
 
+    @OneToOne(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private EMISchedule emiSchedule;
+
     @OneToMany(mappedBy = "loan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference // Inverse side, LoanPayment is the owner
     private List<LoanPayment> payments;
+    @Version
+    private Long version;
 
     @Override
     public String toString() {

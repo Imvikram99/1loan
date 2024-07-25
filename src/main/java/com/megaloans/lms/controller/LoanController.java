@@ -70,6 +70,7 @@ public class LoanController {
             } catch (Exception e) {
                 // Handle any exceptions that occurred during processing
                 e.printStackTrace();
+                break;
             }
         }
     }

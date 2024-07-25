@@ -147,7 +147,6 @@ public class LoanService {
         loanPayment.setLateFeeAmountPaid(lateFeePaid);
         loanPayment.setInterestPaid(accruedInterestPaid);
         loanPayment.setPrincipalPaid(principalPaid);
-        loanPayment.setMissedEmiNumber(0);
 
         LoanPayment savedLoanPayment = loanPaymentRepository.save(loanPayment);
         //loanDetails.getPayments().add(loanPayment);
@@ -239,7 +238,6 @@ public class LoanService {
         loanPayment.setLateFeeAmountPaid(lateFeePaid);
         loanPayment.setInterestPaid(accruedInterestPaid);
         loanPayment.setPrincipalPaid(principalPaid);
-        loanPayment.setMissedEmiNumber(0);
 
         LoanPayment savedLoanPayment = loanPaymentRepository.save(loanPayment);
         logTransaction(savedLoanPayment, loanDetails);

@@ -26,14 +26,12 @@ public class LoanPayment {
     @OneToOne(mappedBy = "loanPayment",cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference // Prevents infinite recursion during JSON serialization
     private LateFeeDetails lateFeeDetails;
-
-
     private LocalDate paymentDate;
     private double paymentAmount;
     private double lateFeeAmountPaid;//this amount is used to pay latefees out of all payment recieved
     private double interestPaid; //this amount is used to pay interstpaid out of all payment recieved
     private double principalPaid;
-    private int missedEmiNumber;
+    private String loanPaymentStatus;
 
     @Override
     public String toString() {

@@ -45,6 +45,16 @@ public class DataInitializer {
             loanDetails.setOutstandingPrincipal(50000.0);
             loanDetails.setLoanStatus(LoanStatus.ACTIVE);
 
+            EMISchedule emiSchedule = new EMISchedule();
+            emiSchedule.setLoan(loanDetails);
+            emiSchedule.setPaymentFrequency(PaymentFrequency.MONTHLY);
+            emiSchedule.setPaymentDay(1); // Assuming payment day is the 1st of each month
+            emiSchedule.setStartDate(LocalDate.now());
+            emiSchedule.setEndDate(LocalDate.now().plusMonths(36));
+
+            // Link the EMISchedule back to LoanDetails
+            loanDetails.setEmiSchedule(emiSchedule);
+
             // Save LoanDetails
             LoanDetails savedLoanDetails = loanDetailsRepository.save(loanDetails);
 
@@ -58,7 +68,6 @@ public class DataInitializer {
             loanPayment1.setInterestPaid(0.0);
             loanPayment1.setPrincipalPaid(1000.0);
             loanPayment1.setLateFeeAmountPaid(0.0);
-            loanPayment1.setMissedEmiNumber(0);
             payments.add(loanPayment1);
 
             LoanPayment loanPayment2 = new LoanPayment();
@@ -68,7 +77,6 @@ public class DataInitializer {
             loanPayment2.setInterestPaid(0.0);
             loanPayment2.setPrincipalPaid(0.0);
             loanPayment2.setLateFeeAmountPaid(0.0);
-            loanPayment2.setMissedEmiNumber(0);
 
             // Initialize LateFeeDetails
             LateFeeDetails lateFeeDetails = new LateFeeDetails();
